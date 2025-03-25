@@ -553,13 +553,33 @@ def fetch_news(query, from_date, to_date):
         response.raise_for_status()
         data = response.json()
         
-        if data['status'] == 'ok' and data['articles']:
-            return data['articles']
+        if data and 'status' in data and data['status'] == 'ok' and 'articles' in data and data['articles']:
+            # Filter out articles with None values in critical fields
+            valid_articles = []
+            for article in data['articles']:
+                if (article.get('title') and 
+                    article.get('description') and 
+                    article.get('source') and 
+                    article.get('source', {}).get('name') and
+                    article.get('publishedAt')):
+                    valid_articles.append(article)
+            
+            if valid_articles:
+                return valid_articles
+            else:
+                st.error("No valid articles found (missing critical data in responses).")
+                return []
         else:
-            st.error("No articles found for the given criteria.")
+            st.error("No articles found for the given criteria or API returned an error.")
             return []
             
     except requests.exceptions.RequestException as e:
+        st.error(f"Error fetching news: {str(e)}")
+        return []
+    except json.JSONDecodeError:
+        st.error("Error parsing API response")
+        return []
+    except Exception as e:
         st.error(f"Error fetching news: {str(e)}")
         return []
 
@@ -640,52 +660,68 @@ def generate_quiz(article):
         return None
 
 def parse_quiz_content(quiz_text):
+    if not quiz_text:
+        st.error("No quiz content to parse")
+        return []
+        
     questions = []
     current_question = None
     current_options = []
     
-    lines = quiz_text.split('\n')
-    for line in lines:
-        line = line.strip()
-        if not line:
-            continue
-            
-        if line.startswith('## Question'):
-            if current_question:
-                questions.append({
-                    'question': current_question,
-                    'options': current_options
-                })
-            current_question = line.replace('## Question', '').strip()
-            current_options = []
-        elif line.startswith(('A)', 'B)', 'C)', 'D)')):
-            current_options.append(line.strip())
-    
-    if current_question:
-        questions.append({
-            'question': current_question,
-            'options': current_options
-        })
-    
-    return questions
+    try:
+        lines = quiz_text.split('\n')
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+                
+            if line.startswith('## Question'):
+                if current_question:
+                    questions.append({
+                        'question': current_question,
+                        'options': current_options
+                    })
+                current_question = line.replace('## Question', '').strip()
+                current_options = []
+            elif line.startswith(('A)', 'B)', 'C)', 'D)')):
+                current_options.append(line.strip())
+        
+        if current_question:
+            questions.append({
+                'question': current_question,
+                'options': current_options
+            })
+        
+        return questions
+    except Exception as e:
+        st.error(f"Error parsing quiz content: {str(e)}")
+        return []
 
 def extract_answer(quiz_text):
+    if not quiz_text:
+        st.error("No quiz content to extract answers from")
+        return {}
+        
     answers = {}
     current_question = None
     
-    lines = quiz_text.split('\n')
-    for line in lines:
-        line = line.strip()
-        if not line:
-            continue
-            
-        if line.startswith('## Question'):
-            current_question = line.replace('## Question', '').strip()
-        elif line.startswith('**Answer:**'):
-            if current_question:
-                answers[current_question] = line.replace('**Answer:**', '').strip()
-    
-    return answers
+    try:
+        lines = quiz_text.split('\n')
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+                
+            if line.startswith('## Question'):
+                current_question = line.replace('## Question', '').strip()
+            elif line.startswith('**Answer:**'):
+                if current_question:
+                    answers[current_question] = line.replace('**Answer:**', '').strip()
+        
+        return answers
+    except Exception as e:
+        st.error(f"Error extracting answers: {str(e)}")
+        return {}
 
 # Title
 st.title("📰 UPSC News Analyzer")
