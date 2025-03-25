@@ -208,13 +208,21 @@ st.markdown("""
 # Load environment variables
 load_dotenv()
 
+# Configure API keys - works both locally and on Streamlit Cloud
+try:
+    # Try to get from Streamlit secrets first (for cloud deployment)
+    GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
+    NEWS_API_KEY = st.secrets["NEWS_API_KEY"]
+except Exception:
+    # Fall back to environment variables (for local development)
+    GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
+    NEWS_API_KEY = os.getenv('NEWS_API_KEY')
+
 # Configure Gemini
-GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
 genai.configure(api_key=GOOGLE_API_KEY)
 model = genai.GenerativeModel('gemini-2.0-flash')
 
 # Configure News API
-NEWS_API_KEY = os.getenv('NEWS_API_KEY')
 NEWS_API_URL = "https://newsapi.org/v2/everything"
 newsapi = NewsApiClient(api_key=NEWS_API_KEY)
 
