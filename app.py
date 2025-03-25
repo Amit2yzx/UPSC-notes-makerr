@@ -218,6 +218,12 @@ except Exception:
     GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
     NEWS_API_KEY = os.getenv('NEWS_API_KEY')
 
+# Validate API keys
+if not GOOGLE_API_KEY:
+    st.error("Google API key is missing. Please check your configuration.")
+if not NEWS_API_KEY:
+    st.error("News API key is missing. Please check your configuration.")
+
 # Configure Gemini
 genai.configure(api_key=GOOGLE_API_KEY)
 model = genai.GenerativeModel('gemini-2.0-flash')
@@ -270,18 +276,19 @@ col1, col2 = st.columns([2, 1])
 
 with col1:
     # Date range selection
-    today = datetime.now()
-    last_week = today - timedelta(days=7)
+    # Use fixed dates to avoid future date issues
+    actual_today = datetime(2024, 3, 26).date()  # Current actual date (March 26, 2024)
+    last_week = actual_today - timedelta(days=7)  # One week ago
     
     # Initialize date range in session state if not exists
     if 'date_range' not in st.session_state:
-        st.session_state.date_range = (last_week, today)
+        st.session_state.date_range = (last_week, actual_today)
     
-    # Date range selection with session state
+    # Date range selection with session state and validation
     date_range = st.date_input(
         "Select Date Range",
         value=st.session_state.date_range,
-        max_value=today
+        max_value=actual_today
     )
     
     # Update session state with new date range
@@ -548,6 +555,17 @@ st.markdown("Made with ❤️ for UPSC Aspirants")
 
 def fetch_news(query, from_date, to_date):
     try:
+        # Validate input parameters
+        if not query or not from_date or not to_date:
+            st.error("Missing required parameters for news search")
+            return []
+            
+        # Validate API key
+        if not NEWS_API_KEY:
+            st.error("News API key is missing")
+            return []
+        
+        # Set up the API request
         params = {
             'q': query,
             'from': from_date,
@@ -557,35 +575,62 @@ def fetch_news(query, from_date, to_date):
             'apiKey': NEWS_API_KEY
         }
         
-        response = requests.get(NEWS_API_URL, params=params)
-        response.raise_for_status()
-        data = response.json()
+        # Debug information
+        st.info(f"Searching for: {query} from {from_date} to {to_date}")
         
-        if data and 'status' in data and data['status'] == 'ok' and 'articles' in data and data['articles']:
-            # Filter out articles with None values in critical fields
-            valid_articles = []
-            for article in data['articles']:
-                if (article.get('title') and 
-                    article.get('description') and 
-                    article.get('source') and 
-                    article.get('source', {}).get('name') and
-                    article.get('publishedAt')):
-                    valid_articles.append(article)
+        # Make the API request
+        response = requests.get(NEWS_API_URL, params=params)
+        
+        # Check response status
+        if response.status_code != 200:
+            st.error(f"API error: Status {response.status_code}")
+            st.info(f"Response: {response.text}")
+            return []
             
-            if valid_articles:
-                return valid_articles
-            else:
-                st.error("No valid articles found (missing critical data in responses).")
-                return []
+        # Parse the JSON response
+        try:
+            data = response.json()
+        except json.JSONDecodeError:
+            st.error("Invalid JSON response from API")
+            return []
+        
+        # Validate the response structure
+        if not data:
+            st.error("Empty response from API")
+            return []
+            
+        if 'status' not in data:
+            st.error("Invalid API response (missing status)")
+            return []
+            
+        if data['status'] != 'ok':
+            message = data.get('message', 'Unknown error')
+            code = data.get('code', 'unknown')
+            st.error(f"API returned error: {code} - {message}")
+            return []
+            
+        if 'articles' not in data:
+            st.error("No articles field in response")
+            return []
+            
+        # Filter valid articles
+        valid_articles = []
+        for article in data['articles']:
+            if (article.get('title') and 
+                article.get('description') and 
+                article.get('source') and 
+                article.get('source', {}).get('name') and
+                article.get('publishedAt')):
+                valid_articles.append(article)
+        
+        if valid_articles:
+            return valid_articles
         else:
-            st.error("No articles found for the given criteria or API returned an error.")
+            st.warning("No valid articles found with complete information")
             return []
             
     except requests.exceptions.RequestException as e:
-        st.error(f"Error fetching news: {str(e)}")
-        return []
-    except json.JSONDecodeError:
-        st.error("Error parsing API response")
+        st.error(f"Network error: {str(e)}")
         return []
     except Exception as e:
         st.error(f"Error fetching news: {str(e)}")
@@ -741,22 +786,39 @@ with st.sidebar:
     # Search query
     query = st.text_input("Enter search query:", "UPSC")
     
-    # Date range
+    # Date range - Force reasonable date values
     col1, col2 = st.columns(2)
     with col1:
-        from_date = st.date_input("From Date", datetime.now() - timedelta(days=7))
+        # Use a fixed default date (last week from today) to avoid future dates
+        default_from = datetime(2024, 3, 19).date()  # One week ago from March 26, 2024
+        from_date = st.date_input("From Date", default_from, max_value=datetime(2024, 3, 26).date())
     with col2:
-        to_date = st.date_input("To Date", datetime.now())
+        # Use a fixed default date (today) to avoid future dates
+        default_to = datetime(2024, 3, 26).date()  # March 26, 2024
+        to_date = st.date_input("To Date", default_to, max_value=datetime(2024, 3, 26).date())
     
     # Search button
     if st.button("Search News"):
         with st.spinner("Fetching news articles..."):
-            articles = fetch_news(query, from_date.strftime('%Y-%m-%d'), to_date.strftime('%Y-%m-%d'))
-            if articles:
-                st.session_state.articles = articles
-                st.success(f"Found {len(articles)} articles!")
-            else:
-                st.warning("No articles found. Try different search criteria.")
+            try:
+                # Format dates properly
+                from_date_str = from_date.strftime('%Y-%m-%d')
+                to_date_str = to_date.strftime('%Y-%m-%d')
+                
+                # Validate date range
+                if from_date > to_date:
+                    st.error("From date cannot be after to date")
+                else:
+                    # Make the API call
+                    articles = fetch_news(query, from_date_str, to_date_str)
+                    if articles:
+                        st.session_state.articles = articles
+                        st.success(f"Found {len(articles)} articles!")
+                    else:
+                        st.warning("No articles found. Try different search criteria.")
+            except Exception as e:
+                st.error(f"Error during search: {str(e)}")
+                st.info("Please try different search parameters")
 
 # Main content area
 if st.session_state.articles:
