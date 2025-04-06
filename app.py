@@ -16,6 +16,9 @@ from streamlit_extras.chart_container import chart_container
 from streamlit_extras.grid import grid
 import requests
 import time
+from upsc_notes_generator import generate_upsc_notes, generate_quiz
+import re
+from bs4 import BeautifulSoup
 
 # Set page config (must be the first Streamlit command)
 st.set_page_config(
@@ -368,102 +371,13 @@ with col1:
                                 if st.button("Generate UPSC Notes", key=f"generate_{article['title']}"):
                                     with st.spinner("Generating UPSC notes..."):
                                         try:
-                                            prompt = f"""
-                                            Create comprehensive UPSC-style notes for the following news article in a visually appealing format:
-                                            Title: {article['title']}
-                                            Description: {article['description']}
-                                            Article URL: {article['url']}
-                                            
-                                            Please structure the notes using the following format:
-                                            
-                                            # 📌 {article['title']}
-                                            
-                                            ## 🔗 Source Information
-                                            | Category | Details |
-                                            |----------|---------|
-                                            | Source | {article['source']['name']} |
-                                            | Published Date | {article['publishedAt']} |
-                                            | Article Link | [{article['url']}]({article['url']}) |
-                                            
-                                            ## 🎯 Key Facts
-                                            | Category | Details |
-                                            |----------|---------|
-                                            | Important Dates | [List dates] |
-                                            | Key People/Organizations | [List names] |
-                                            | Statistics | [List key numbers] |
-                                            
-                                            ## ⚖️ Constitutional/Legal Aspects
-                                            ### Relevant Articles
-                                            - Article XXX: [Details]
-                                            - Article YYY: [Details]
-                                            
-                                            ### Legal Implications
-                                            - Point 1
-                                            - Point 2
-                                            
-                                            ## 📚 UPSC Relevance
-                                            ### Related Topics
-                                            ```mermaid
-                                            graph TD
-                                                A[Main Topic] --> B[Subtopic 1]
-                                                A --> C[Subtopic 2]
-                                                B --> D[Detail 1]
-                                                C --> E[Detail 2]
-                                            ```
-                                            
-                                            ### Potential Questions
-                                            1. Question 1
-                                            2. Question 2
-                                            
-                                            ## 🌍 Additional Context
-                                            ### Historical Background
-                                            > Important historical context goes here
-                                            
-                                            ### Related Policies
-                                            - Policy 1
-                                            - Policy 2
-                                            
-                                            ### International Perspective
-                                            | Country | Similar Initiatives |
-                                            |---------|-------------------|
-                                            | Country 1 | Initiative 1 |
-                                            | Country 2 | Initiative 2 |
-                                            
-                                            ## 📊 Data Visualization
-                                            ```mermaid
-                                            pie title Distribution of Key Components
-                                                "Component 1" : 30
-                                                "Component 2" : 40
-                                                "Component 3" : 30
-                                            ```
-                                            
-                                            ## 📝 Summary
-                                            Key takeaways in bullet points:
-                                            - Point 1
-                                            - Point 2
-                                            
-                                            ## 🔍 Quick Reference
-                                            | Category | Key Points |
-                                            |----------|------------|
-                                            | Important Dates | [Dates] |
-                                            | Key People | [Names] |
-                                            | Related Topics | [Topics] |
-                                            
-                                            Use emojis, tables, and diagrams where appropriate to make the notes more engaging and easier to understand.
-                                            Keep the information concise but comprehensive.
-                                            Use different heading levels (H1, H2, H3) for better organization.
-                                            Include blockquotes for important historical context.
-                                            Use tables for structured data.
-                                            Use mermaid diagrams for relationships and data visualization.
-                                            """
-                                            
-                                            response = model.generate_content(prompt)
-                                            if response.text:
-                                                st.session_state.notes[article['title']] = response.text
+                                            notes = generate_upsc_notes(article['title'], article['description'])
+                                            if notes:
+                                                st.session_state.notes[article['title']] = notes
                                                 st.success("Notes generated successfully!")
                                                 
                                                 # Display the generated notes
-                                                st.markdown(response.text)
+                                                st.markdown(notes)
                                                 
                                                 # Add a divider between articles
                                                 st.markdown("---")
@@ -475,49 +389,9 @@ with col1:
                                 if st.button("Generate Quiz", key=f"quiz_{article['title']}"):
                                     with st.spinner("Generating quiz..."):
                                         try:
-                                            quiz_prompt = f"""
-                                            Create a quiz with 5 multiple-choice questions based on this article:
-                                            Title: {article['title']}
-                                            Description: {article['description']}
-                                            
-                                            Format the quiz as follows:
-                                            
-                                            # 📝 Quick Quiz
-                                            
-                                            ## Question 1
-                                            [Question text]
-                                            
-                                            A) [Option A]
-                                            B) [Option B]
-                                            C) [Option C]
-                                            D) [Option D]
-                                            
-                                            **Answer:** [Correct option letter]
-                                            
-                                            ## Question 2
-                                            [Question text]
-                                            
-                                            A) [Option A]
-                                            B) [Option B]
-                                            C) [Option C]
-                                            D) [Option D]
-                                            
-                                            **Answer:** [Correct option letter]
-                                            
-                                            [Continue for all 5 questions]
-                                            
-                                            Make sure the questions:
-                                            1. Are directly related to the article content
-                                            2. Test understanding rather than just memorization
-                                            3. Have clear, unambiguous answers
-                                            4. Include explanations for the correct answers
-                                            5. Cover different aspects of the article
-                                            """
-                                            
-                                            quiz_response = model.generate_content(quiz_prompt)
-                                            if quiz_response.text:
-                                                # Store quiz in session state
-                                                st.session_state.quiz = quiz_response.text
+                                            quiz = generate_quiz(article)
+                                            if quiz:
+                                                st.session_state.quiz = quiz
                                                 st.session_state.quiz_title = article['title']
                                                 st.session_state.quiz_description = article['description']
                                                 st.success("Quiz generated successfully!")
@@ -660,82 +534,6 @@ def fetch_news(query, from_date, to_date):
         st.code(traceback.format_exc())
         return []
 
-def generate_upsc_notes(article):
-    try:
-        model = genai.GenerativeModel('gemini-pro')
-        
-        prompt = f"""
-        Generate UPSC-style notes from this news article:
-        
-        Title: {article['title']}
-        Description: {article['description']}
-        
-        Format the notes in the following structure:
-        
-        # Key Points
-        - Point 1
-        - Point 2
-        ...
-        
-        # Important Facts
-        - Fact 1
-        - Fact 2
-        ...
-        
-        # Related Topics
-        - Topic 1
-        - Topic 2
-        ...
-        
-        # UPSC Relevance
-        - Relevance point 1
-        - Relevance point 2
-        ...
-        
-        Make the notes concise, factual, and relevant for UPSC preparation.
-        """
-        
-        response = model.generate_content(prompt)
-        return response.text
-        
-    except Exception as e:
-        st.error(f"Error generating notes: {str(e)}")
-        return None
-
-def generate_quiz(article):
-    try:
-        model = genai.GenerativeModel('gemini-pro')
-        
-        prompt = f"""
-        Generate 5 multiple choice questions based on this news article:
-        
-        Title: {article['title']}
-        Description: {article['description']}
-        
-        Format each question as follows:
-        
-        ## Question 1
-        A) Option 1
-        B) Option 2
-        C) Option 3
-        D) Option 4
-        **Answer:** A
-        
-        Make the questions:
-        1. Clear and concise
-        2. Based on key facts from the article
-        3. Relevant for UPSC preparation
-        4. Have only one correct answer
-        5. Include explanations for the correct answer
-        """
-        
-        response = model.generate_content(prompt)
-        return response.text
-        
-    except Exception as e:
-        st.error(f"Error generating quiz: {str(e)}")
-        return None
-
 def parse_quiz_content(quiz_text):
     if not quiz_text:
         st.error("No quiz content to parse")
@@ -800,6 +598,153 @@ def extract_answer(quiz_text):
         st.error(f"Error extracting answers: {str(e)}")
         return {}
 
+def fetch_article_content(url):
+    """
+    Fetch the full content of an article from a URL.
+    
+    Args:
+        url (str): The URL of the article
+        
+    Returns:
+        str: The full content of the article
+    """
+    try:
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+        
+        soup = BeautifulSoup(response.text, 'html.parser')
+        
+        # Extract article content
+        article_content = ""
+        
+        # Try multiple approaches to extract content
+        content_found = False
+        
+        # Approach 1: Look for common article content containers
+        article_containers = soup.find_all(['article', 'div', 'section'], class_=re.compile(r'article|content|story|main|body|text'))
+        for container in article_containers:
+            # Get all text elements
+            paragraphs = container.find_all(['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'])
+            if paragraphs:
+                for p in paragraphs:
+                    text = p.get_text().strip()
+                    if text and len(text) > 20:  # Only include substantial paragraphs
+                        article_content += text + "\n\n"
+                content_found = True
+        
+        # Approach 2: If no content found, try getting all paragraphs
+        if not content_found:
+            paragraphs = soup.find_all('p')
+            for p in paragraphs:
+                text = p.get_text().strip()
+                if text and len(text) > 20:  # Only include substantial paragraphs
+                    article_content += text + "\n\n"
+            content_found = bool(article_content)
+        
+        # Approach 3: If still no content, try getting the main content area
+        if not content_found:
+            main_content = soup.find('main') or soup.find('div', role='main')
+            if main_content:
+                article_content = main_content.get_text(separator='\n\n', strip=True)
+                content_found = True
+        
+        # Approach 4: Last resort - get all text but clean it up
+        if not content_found:
+            # Remove script and style elements
+            for script in soup(['script', 'style', 'nav', 'header', 'footer']):
+                script.decompose()
+            
+            # Get text and clean it up
+            article_content = soup.get_text(separator='\n\n', strip=True)
+            
+            # Remove excessive whitespace and empty lines
+            article_content = re.sub(r'\n\s*\n', '\n\n', article_content)
+            article_content = re.sub(r'\s+', ' ', article_content)
+            
+            # Split into paragraphs and filter out short ones
+            paragraphs = [p.strip() for p in article_content.split('\n\n') if len(p.strip()) > 20]
+            article_content = '\n\n'.join(paragraphs)
+        
+        # Clean up the content
+        article_content = re.sub(r'\n\s*\n', '\n\n', article_content)  # Remove excessive newlines
+        article_content = re.sub(r'\s+', ' ', article_content)  # Normalize whitespace
+        article_content = article_content.strip()
+        
+        return article_content
+        
+    except Exception as e:
+        st.error(f"Error fetching article content: {str(e)}")
+        return None
+
+# Add a section for manual article input
+st.sidebar.markdown("---")
+st.sidebar.subheader("Manual Article Input")
+article_url = st.sidebar.text_input("Article URL", "http://timesofindia.indiatimes.com/articleshow/120024193.cms")
+if st.sidebar.button("Fetch Article"):
+    with st.spinner("Fetching article content..."):
+        article_content = fetch_article_content(article_url)
+        if article_content:
+            st.session_state.manual_article = {
+                'title': "Sugar factory land to be developed as ethanol production plant",
+                'description': article_content,
+                'url': article_url,
+                'source': {'name': 'Times of India'},
+                'publishedAt': datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+            }
+            st.success("Article fetched successfully!")
+            
+            # Display the article content
+            st.markdown("### Article Content")
+            st.write(article_content)
+            
+            # Add Generate Notes button
+            if st.button("Generate UPSC Notes"):
+                with st.spinner("Fetching article content..."):
+                    article_content = fetch_article_content(article_url)
+                    if article_content:
+                        with st.spinner("Generating UPSC notes..."):
+                            notes = generate_upsc_notes("Article from URL", article_content)
+                            if notes:
+                                st.session_state.notes[article_url] = notes
+                                st.success("Notes generated successfully!")
+                                st.markdown(notes)
+                    else:
+                        st.error("Failed to fetch article content. Please try again or enter the content manually.")
+        else:
+            st.error("Failed to fetch article content. Please try again or enter the content manually.")
+
+# Add a debug section for manual text input
+st.sidebar.markdown("---")
+st.sidebar.subheader("Manual Text Input")
+manual_title = st.sidebar.text_input("Article Title", "Weekly Health Horoscope Predictions April 05, 2025: Tips for wellness and balance based on each zodiac sign, Know here")
+manual_content = st.sidebar.text_area("Article Content", "This week's horoscope emphasizes health and wellness for each zodiac sign. It suggests various ways to improve physical and mental health, including exercise, proper diet, hydration, and stress management strategies. The advice aims to help individuals maintain a balanced lifestyle and enhance their overall well-being.", height=200)
+
+if st.sidebar.button("Use Manual Input"):
+    st.session_state.manual_article = {
+        'title': manual_title,
+        'description': manual_content,
+        'url': "Manual Input",
+        'source': {'name': 'Manual Input'},
+        'publishedAt': datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+    }
+    st.success("Manual input set successfully!")
+    
+    # Display the article content
+    st.markdown("### Article Content")
+    st.write(manual_content)
+    
+    # Add Generate Notes button
+    if st.button("Generate UPSC Notes"):
+        with st.spinner("Generating UPSC notes..."):
+            notes = generate_upsc_notes(manual_title, manual_content)
+            if notes:
+                st.session_state.notes[manual_title] = notes
+                st.success("Notes generated successfully!")
+                st.markdown(notes)
+
 # Title
 st.title("📰 UPSC News Analyzer")
 
@@ -842,11 +787,17 @@ if st.session_state.articles:
             
             # Generate notes button
             if st.button(f"Generate UPSC Notes", key=f"notes_{i}"):
-                with st.spinner("Generating UPSC notes..."):
-                    notes = generate_upsc_notes(article)
-                    if notes:
-                        st.session_state.notes[i] = notes
-                        st.success("Notes generated successfully!")
+                with st.spinner("Fetching article content..."):
+                    article_content = fetch_article_content(article['url'])
+                    if article_content:
+                        with st.spinner("Generating UPSC notes..."):
+                            notes = generate_upsc_notes(article['title'], article_content)
+                            if notes:
+                                st.session_state.notes[article['title']] = notes
+                                st.success("Notes generated successfully!")
+                                st.markdown(notes)
+                    else:
+                        st.error("Failed to fetch article content. Please try again.")
             
             # Display notes if available
             if i in st.session_state.notes:
@@ -997,4 +948,73 @@ if st.session_state.articles:
             
             st.markdown("---")
 else:
-    st.info("👈 Use the sidebar to search for news articles.") 
+    st.info("👈 Use the sidebar to search for news articles.")
+
+# Add a section for specific news sources and date
+st.sidebar.markdown("---")
+st.sidebar.subheader("Specific News Sources")
+news_source = st.sidebar.selectbox("Select News Source", ["The Hindu", "The Indian Express"])
+news_date = st.sidebar.date_input("Select Date", datetime.now())
+
+if st.sidebar.button("Fetch News"):
+    with st.spinner(f"Fetching news from {news_source} for {news_date.strftime('%d %B %Y')}..."):
+        # Format date for API
+        formatted_date = news_date.strftime("%Y-%m-%d")
+        
+        # Create search query based on source
+        if news_source == "The Hindu":
+            query = "source:thehindu.com"
+        else:  # The Indian Express
+            query = "source:indianexpress.com"
+        
+        # Fetch news from News API using the same date for both from and to parameters
+        news_url = f"https://newsapi.org/v2/everything?q={query}&from={formatted_date}&to={formatted_date}&sortBy=publishedAt&apiKey={NEWS_API_KEY}&language=en"
+        response = requests.get(news_url)
+        news_data = response.json()
+        
+        if news_data["status"] == "ok" and news_data["totalResults"] > 0:
+            st.session_state.news_articles = news_data["articles"]
+            st.session_state.news_date = news_date
+            st.session_state.news_source = news_source
+            st.success(f"Found {len(news_data['articles'])} articles from {news_source} for {news_date.strftime('%d %B %Y')}")
+        else:
+            st.error(f"No articles found from {news_source} for {news_date.strftime('%d %B %Y')}")
+
+# Display news articles if available
+if "news_articles" in st.session_state and st.session_state.news_articles:
+    st.markdown(f"## {st.session_state.news_source} News for {st.session_state.news_date.strftime('%d %B %Y')}")
+    
+    for i, article in enumerate(st.session_state.news_articles):
+        with st.expander(f"{i+1}. {article['title']}", expanded=False):
+            st.markdown(f"**Source:** {article['source']['name']}")
+            st.markdown(f"**Published:** {article['publishedAt']}")
+            
+            if article['urlToImage']:
+                st.image(article['urlToImage'], width=600)
+            
+            st.markdown("**Description:**")
+            st.write(article['description'])
+            
+            st.markdown("**Content:**")
+            st.write(article['content'])
+            
+            st.markdown(f"[Read full article]({article['url']})")
+            
+            # Generate notes button
+            if st.button(f"Generate UPSC Notes", key=f"notes_{i}"):
+                with st.spinner("Fetching article content..."):
+                    article_content = fetch_article_content(article['url'])
+                    if article_content:
+                        with st.spinner("Generating UPSC notes..."):
+                            notes = generate_upsc_notes(article['title'], article_content)
+                            if notes:
+                                st.session_state.notes[article['title']] = notes
+                                st.success("Notes generated successfully!")
+                                st.markdown(notes)
+                    else:
+                        st.error("Failed to fetch article content. Please try again.")
+            
+            # Display notes if available
+            if article['title'] in st.session_state.notes:
+                st.markdown("### Generated UPSC Notes")
+                st.markdown(st.session_state.notes[article['title']], unsafe_allow_html=True) 
