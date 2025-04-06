@@ -23,189 +23,217 @@ from bs4 import BeautifulSoup
 # Set page config (must be the first Streamlit command)
 st.set_page_config(
     page_title="UPSC News Analyzer & Note Maker",
-    page_icon="📚",
-    layout="wide"
+    page_icon="��",
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
 # Custom CSS for better styling
 st.markdown("""
-    <style>
-    /* Main Theme Colors */
-    :root {
-        --primary-color: #2c3e50;
-        --secondary-color: #3498db;
-        --accent-color: #e74c3c;
-        --success-color: #2ecc71;
-        --warning-color: #f1c40f;
-        --background-color: #f5f6fa;
-        --text-color: #2c3e50;
-    }
-
+<style>
     /* Global Styles */
-    .stMarkdown {
-        font-family: 'Segoe UI', 'Georgia', serif;
-        color: var(--text-color);
+    .stApp {
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
     }
-
-    /* Header Styles */
-    .stMarkdown h1 {
-        color: var(--primary-color);
-        border-bottom: 3px solid var(--secondary-color);
-        padding-bottom: 15px;
-        margin-bottom: 30px;
-        font-size: 2.5em;
+    
+    /* Main title styling */
+    .main-title {
+        font-size: 2.5rem;
+        background: linear-gradient(45deg, #1E3A8A, #3B82F6);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
         text-align: center;
-        text-transform: uppercase;
-        letter-spacing: 2px;
+        margin-bottom: 2rem;
+        font-weight: 800;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
     }
-
-    .stMarkdown h2 {
-        color: var(--secondary-color);
-        border-left: 5px solid var(--secondary-color);
-        padding-left: 15px;
-        margin: 20px 0;
-        font-size: 1.8em;
+    
+    /* Section headers */
+    .section-header {
+        color: #1E3A8A;
+        font-size: 1.8rem;
+        margin-top: 2rem;
+        margin-bottom: 1rem;
+        font-weight: 700;
+        background: linear-gradient(45deg, #1E3A8A, #3B82F6);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
     }
-
-    .stMarkdown h3 {
-        color: var(--primary-color);
-        font-size: 1.4em;
-        margin: 15px 0;
-    }
-
-    /* Article Container Styles */
+    
+    /* Article container styling */
     .article-container {
-        background-color: white;
-        padding: 25px;
+        background: rgba(255, 255, 255, 0.9);
         border-radius: 15px;
-        margin: 20px 0;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        padding: 1.5rem;
+        margin: 1rem 0;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(10px);
         transition: transform 0.3s ease, box-shadow 0.3s ease;
-        border: 1px solid rgba(0,0,0,0.1);
     }
-
+    
     .article-container:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
     }
-
-    /* Notes Container Styles */
-    .notes-container {
-        background-color: var(--background-color);
-        padding: 20px;
-        border-radius: 10px;
-        margin: 15px 0;
-        border-left: 4px solid var(--success-color);
+    
+    /* Article title styling */
+    .article-title {
+        color: #1E3A8A;
+        font-size: 1.4rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        background: linear-gradient(45deg, #1E3A8A, #3B82F6);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
     }
-
-    /* Quiz Container Styles */
-    .quiz-container {
-        background-color: white;
-        padding: 25px;
-        border-radius: 15px;
-        margin: 20px 0;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-        border: 1px solid rgba(0,0,0,0.1);
-    }
-
-    .quiz-container:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 12px rgba(0,0,0,0.15);
-    }
-
-    /* Question Styles */
-    .question-text {
-        font-size: 1.1em;
+    
+    /* Article content styling */
+    .article-content {
+        color: #374151;
+        font-size: 1rem;
         line-height: 1.6;
-        color: var(--text-color);
-        margin: 15px 0;
-        padding: 10px;
-        background-color: var(--background-color);
-        border-radius: 8px;
     }
-
-    /* Radio Button Styles */
-    .stRadio > div {
-        background-color: white;
-        padding: 10px;
-        border-radius: 8px;
-        margin: 5px 0;
+    
+    /* Button styling */
+    .stButton>button {
+        background: linear-gradient(45deg, #1E3A8A, #3B82F6);
+        color: white;
+        border-radius: 25px;
+        padding: 0.5rem 1.5rem;
+        font-weight: 600;
+        border: none;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    
+    .stButton>button:hover {
+        background: linear-gradient(45deg, #3B82F6, #1E3A8A);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    }
+    
+    /* Sidebar styling */
+    .css-1d391kg {
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    }
+    
+    /* Input fields styling */
+    .stTextInput>div>div>input {
+        border-radius: 10px;
+        border: 1px solid #E5E7EB;
+        background: rgba(255, 255, 255, 0.9);
         transition: all 0.3s ease;
     }
-
+    
+    .stTextInput>div>div>input:focus {
+        border-color: #3B82F6;
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+    }
+    
+    /* Date input styling */
+    .stDateInput>div>div>input {
+        border-radius: 10px;
+        border: 1px solid #E5E7EB;
+        background: rgba(255, 255, 255, 0.9);
+    }
+    
+    /* Notes container styling */
+    .notes-container {
+        background: rgba(248, 250, 252, 0.9);
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin: 1rem 0;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(10px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    
+    /* Quiz container styling */
+    .quiz-container {
+        background: rgba(240, 249, 255, 0.9);
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin: 1rem 0;
+        border: 1px solid rgba(186, 230, 253, 0.3);
+        backdrop-filter: blur(10px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    
+    /* Results container styling */
+    .results-container {
+        background: rgba(236, 253, 245, 0.9);
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin: 1rem 0;
+        border: 1px solid rgba(167, 243, 208, 0.3);
+        backdrop-filter: blur(10px);
+        text-align: center;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    
+    /* Expander styling */
+    .streamlit-expanderHeader {
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        border-radius: 10px;
+        padding: 0.5rem;
+        font-weight: 600;
+        color: #1E3A8A;
+    }
+    
+    /* Success message styling */
+    .stSuccess {
+        background: rgba(236, 253, 245, 0.9);
+        border-radius: 10px;
+        padding: 1rem;
+        border: 1px solid rgba(167, 243, 208, 0.3);
+        backdrop-filter: blur(10px);
+    }
+    
+    /* Error message styling */
+    .stError {
+        background: rgba(254, 242, 242, 0.9);
+        border-radius: 10px;
+        padding: 1rem;
+        border: 1px solid rgba(254, 202, 202, 0.3);
+        backdrop-filter: blur(10px);
+    }
+    
+    /* Info message styling */
+    .stInfo {
+        background: rgba(239, 246, 255, 0.9);
+        border-radius: 10px;
+        padding: 1rem;
+        border: 1px solid rgba(191, 219, 254, 0.3);
+        backdrop-filter: blur(10px);
+    }
+    
+    /* Radio button styling */
+    .stRadio > div {
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: 10px;
+        padding: 1rem;
+        margin: 0.5rem 0;
+        transition: all 0.3s ease;
+    }
+    
     .stRadio > div:hover {
-        background-color: var(--background-color);
+        background: rgba(255, 255, 255, 0.95);
         transform: translateX(5px);
     }
-
-    /* Feedback Styles */
-    .stSuccess {
-        background-color: rgba(46, 204, 113, 0.1);
-        border-left: 4px solid var(--success-color);
-        padding: 15px;
-        border-radius: 8px;
-        margin: 10px 0;
-    }
-
-    .stError {
-        background-color: rgba(231, 76, 60, 0.1);
-        border-left: 4px solid var(--accent-color);
-        padding: 15px;
-        border-radius: 8px;
-        margin: 10px 0;
-    }
-
-    /* Results Container */
-    .results-container {
-        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-        color: white;
-        padding: 30px;
-        border-radius: 15px;
-        margin: 20px 0;
+    
+    /* Footer styling */
+    .footer {
         text-align: center;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        padding: 2rem;
+        color: #6B7280;
+        font-size: 0.9rem;
+        background: linear-gradient(135deg, rgba(245, 247, 250, 0.9) 0%, rgba(195, 207, 226, 0.9) 100%);
+        border-radius: 15px;
+        margin-top: 2rem;
+        backdrop-filter: blur(10px);
     }
-
-    .results-container h2 {
-        color: white;
-        border: none;
-        font-size: 2em;
-        margin-bottom: 20px;
-    }
-
-    .results-container h3 {
-        color: white;
-        font-size: 1.8em;
-        margin: 15px 0;
-    }
-
-    /* Button Styles */
-    .stButton > button {
-        background-color: var(--secondary-color);
-        color: white;
-        border: none;
-        padding: 10px 25px;
-        border-radius: 25px;
-        font-size: 1.1em;
-        transition: all 0.3s ease;
-    }
-
-    .stButton > button:hover {
-        background-color: var(--primary-color);
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    }
-
-    /* Warning Message Style */
-    .stWarning {
-        background-color: rgba(241, 196, 15, 0.1);
-        border-left: 4px solid var(--warning-color);
-        padding: 15px;
-        border-radius: 8px;
-        margin: 20px 0;
-    }
-    </style>
+</style>
 """, unsafe_allow_html=True)
 
 # Load environment variables
@@ -431,17 +459,20 @@ with col1:
 
 with col2:
     # Saved Notes Section
-    st.header("📝 Saved Notes")
+    st.markdown('<h2 class="section-header">📝 Saved Notes</h2>', unsafe_allow_html=True)
     if st.session_state.saved_notes:
         for title, notes in st.session_state.saved_notes.items():
             with st.expander(title):
                 st.text_area("", notes, height=200, key=f"saved_{title}")
     else:
-        st.info("No saved notes yet. Generate notes from news articles to save them here!")
+        st.info("📚 No saved notes yet. Generate notes from news articles to save them here!")
 
 # Footer
-st.markdown("---")
-st.markdown("Made with ❤️ for UPSC Aspirants")
+st.markdown("""
+<div style="text-align: center; padding: 2rem; color: #6B7280; font-size: 0.9rem;">
+    Made with ❤️ for UPSC Aspirants
+</div>
+""", unsafe_allow_html=True)
 
 def fetch_news(query, from_date, to_date):
     try:
@@ -746,58 +777,67 @@ if st.sidebar.button("Use Manual Input"):
                 st.markdown(notes)
 
 # Title
-st.title("📰 UPSC News Analyzer")
+st.markdown('<h1 class="main-title">📰 UPSC News Analyzer</h1>', unsafe_allow_html=True)
 
 # Sidebar for search parameters
 with st.sidebar:
-    st.header("Search Parameters")
+    st.markdown('<h2 class="section-header">Search Parameters</h2>', unsafe_allow_html=True)
     
-    # Search query
-    query = st.text_input("Enter search query:", "UPSC")
+    # Search query with icon
+    st.markdown('🔍 **Search Query**')
+    query = st.text_input("", "UPSC", key="search_query")
     
-    # Date range
+    # Date range with icons
+    st.markdown('📅 **Date Range**')
     col1, col2 = st.columns(2)
     with col1:
-        from_date = st.date_input("From Date", datetime.now() - timedelta(days=7))
+        from_date = st.date_input("From", datetime.now() - timedelta(days=7))
     with col2:
-        to_date = st.date_input("To Date", datetime.now())
+        to_date = st.date_input("To", datetime.now())
     
-    # Search button
-    if st.button("Search News"):
-        with st.spinner("Fetching news articles..."):
+    # Search button with icon
+    if st.button("🔍 Search News"):
+        with st.spinner("🔍 Fetching news articles..."):
             articles = fetch_news(query, from_date.strftime('%Y-%m-%d'), to_date.strftime('%Y-%m-%d'))
             if articles:
                 st.session_state.articles = articles
-                st.success(f"Found {len(articles)} articles!")
+                st.success(f"✨ Found {len(articles)} articles!")
             else:
-                st.warning("No articles found. Try different search criteria.")
+                st.warning("❌ No articles found. Try different search criteria.")
 
 # Main content area
 if st.session_state.articles:
+    st.markdown('<h2 class="section-header">📰 Latest News Articles</h2>', unsafe_allow_html=True)
+    
     for i, article in enumerate(st.session_state.articles):
         with st.container():
-            # Article content
             st.markdown(f"""
             <div class="article-container">
-                <h2>{article['title']}</h2>
-                <p>{article['description']}</p>
-                <p><strong>Source:</strong> {article['source']['name']} | <strong>Published:</strong> {article['publishedAt']}</p>
+                <h3 class="article-title">{article['title']}</h3>
+                <div class="article-content">
+                    <p>{article['description']}</p>
+                    <p><strong>Source:</strong> {article['source']['name']} | <strong>Published:</strong> {article['publishedAt']}</p>
+                </div>
             </div>
             """, unsafe_allow_html=True)
             
-            # Generate notes button
-            if st.button(f"Generate UPSC Notes", key=f"notes_{i}"):
-                with st.spinner("Fetching article content..."):
+            # Generate notes button with icon
+            if st.button(f"📝 Generate UPSC Notes", key=f"notes_{i}"):
+                with st.spinner("📚 Generating notes..."):
                     article_content = fetch_article_content(article['url'])
                     if article_content:
-                        with st.spinner("Generating UPSC notes..."):
+                        with st.spinner("✨ Creating UPSC notes..."):
                             notes = generate_upsc_notes(article['title'], article_content)
                             if notes:
                                 st.session_state.notes[article['title']] = notes
-                                st.success("Notes generated successfully!")
-                                st.markdown(notes)
+                                st.success("✅ Notes generated successfully!")
+                                st.markdown(f"""
+                                <div class="notes-container">
+                                    {notes}
+                                </div>
+                                """, unsafe_allow_html=True)
                     else:
-                        st.error("Failed to fetch article content. Please try again.")
+                        st.error("❌ Failed to fetch article content. Please try again.")
             
             # Display notes if available
             if i in st.session_state.notes:
@@ -807,144 +847,73 @@ if st.session_state.articles:
                 </div>
                 """, unsafe_allow_html=True)
             
-            # Generate quiz button
-            if st.button(f"Generate Quiz", key=f"quiz_{i}"):
-                with st.spinner("Generating quiz..."):
-                    try:
-                        quiz_prompt = f"""
-                        Create a quiz with 5 multiple-choice questions based on this article:
-                        Title: {article['title']}
-                        Description: {article['description']}
+            # Generate quiz button with icon
+            if st.button(f"❓ Generate Quiz", key=f"quiz_{i}"):
+                with st.spinner("🎯 Generating quiz..."):
+                    quiz = generate_quiz(article['title'], article['description'])
+                    if quiz:
+                        st.session_state.quiz[article['title']] = quiz
+                        st.success("✅ Quiz generated successfully!")
                         
-                        Format the quiz as follows:
+                        # Parse quiz content
+                        questions = []
+                        answers = {}
+                        current_question = None
                         
-                        # 📝 Quick Quiz
+                        for line in quiz.split('\n'):
+                            line = line.strip()
+                            if line.startswith('Q'):
+                                current_question = line
+                                questions.append({'question': current_question})
+                            elif line.startswith(('a)', 'b)', 'c)', 'd)')):
+                                if current_question:
+                                    if current_question not in answers:
+                                        answers[current_question] = []
+                                    answers[current_question].append(line)
+                            elif line.startswith('Answer:'):
+                                if current_question:
+                                    answers[current_question] = line.replace('Answer:', '').strip()
                         
-                        ## Question 1
-                        [Question text]
-                        
-                        A) [Option A]
-                        B) [Option B]
-                        C) [Option C]
-                        D) [Option D]
-                        
-                        **Answer:** [Correct option letter]
-                        
-                        ## Question 2
-                        [Question text]
-                        
-                        A) [Option A]
-                        B) [Option B]
-                        C) [Option C]
-                        D) [Option D]
-                        
-                        **Answer:** [Correct option letter]
-                        
-                        [Continue for all 5 questions]
-                        
-                        Make sure the questions:
-                        1. Are directly related to the article content
-                        2. Test understanding rather than just memorization
-                        3. Have clear, unambiguous answers
-                        4. Include explanations for the correct answers
-                        5. Cover different aspects of the article
-                        """
-                        
-                        quiz_response = model.generate_content(quiz_prompt)
-                        if quiz_response.text:
-                            # Store quiz in session state
-                            st.session_state.quiz = quiz_response.text
-                            st.session_state.quiz_title = article['title']
-                            st.session_state.quiz_description = article['description']
-                            st.success("Quiz generated successfully!")
-                            
-                            # Add a link to view the quiz
-                            st.markdown(f"""
-                            <div style="text-align: center; margin: 10px 0;">
-                                <a href="/quiz" target="_blank" style="
-                                    display: inline-block;
-                                    padding: 10px 20px;
-                                    background-color: #4CAF50;
-                                    color: white;
-                                    text-decoration: none;
-                                    border-radius: 5px;
-                                    font-weight: bold;
-                                ">
-                                    Take the Quiz 📝
-                                </a>
-                            </div>
-                            """, unsafe_allow_html=True)
-                        else:
-                            st.error("Failed to generate quiz. Please try again.")
-                    except Exception as e:
-                        st.error(f"Error generating quiz: {str(e)}")
-                        st.info("Please check your Gemini API key configuration")
-            
-            # Display quiz if available
-            if i in st.session_state.quiz:
-                # Parse quiz content
-                questions = parse_quiz_content(st.session_state.quiz[i])
-                answers = extract_answer(st.session_state.quiz[i])
-                
-                st.markdown("### 📝 Quiz")
-                
-                # Display each question with radio buttons
-                for j, q in enumerate(questions, 1):
-                    with st.container():
-                        # Display question
+                        # Display quiz with styling
                         st.markdown(f"""
                         <div class="quiz-container">
-                            <h3>Question {j}</h3>
-                            <div class="question-text">{q['question']}</div>
-                        </div>
+                            <h3>📝 Quiz on {article['title']}</h3>
                         """, unsafe_allow_html=True)
                         
-                        # Display options
-                        if q['options']:
-                            selected_option = st.radio(
-                                "Select your answer:",
-                                q['options'],
-                                key=f"q_{i}_{j}",
-                                label_visibility="collapsed"
-                            )
-                            
-                            # Store the answer
-                            st.session_state.quiz_answers[f"q_{i}_{j}"] = selected_option
-                            
-                            # Show feedback if answer is selected
-                            if f"q_{i}_{j}" in st.session_state.quiz_answers:
-                                correct_answer = answers.get(q['question'])
-                                if correct_answer:
-                                    if selected_option.startswith(correct_answer):
-                                        st.success("🎉 Correct! Well done!")
-                                    else:
-                                        st.error(f"❌ Wrong! The correct answer is {correct_answer}")
-                        else:
-                            st.warning("No options available for this question.")
+                        for j, q in enumerate(questions, 1):
+                            st.markdown(f"**Q{j}:** {q['question']}")
+                            if isinstance(answers.get(q['question']), list):
+                                options = answers[q['question']]
+                                selected = st.radio(
+                                    "Select your answer:",
+                                    options,
+                                    key=f"q_{i}_{j}",
+                                    label_visibility="collapsed"
+                                )
                         
-                        st.markdown("---")
-                
-                # Add a submit button at the bottom
-                if st.button("Submit Quiz", key=f"submit_{i}"):
-                    score = 0
-                    total = len(questions)
-                    
-                    for j, q in enumerate(questions, 1):
-                        selected = st.session_state.quiz_answers.get(f"q_{i}_{j}")
-                        correct = answers.get(q['question'])
-                        if selected and correct and selected.startswith(correct):
-                            score += 1
-                    
-                    st.markdown(f"""
-                    <div class="results-container">
-                        <h2>🎯 Quiz Results</h2>
-                        <h3>Score: {score}/{total}</h3>
-                        <p style="font-size: 1.2em;">Percentage: {(score/total)*100:.1f}%</p>
-                    </div>
-                    """, unsafe_allow_html=True)
-                    
-                    if score == total:
-                        st.balloons()
+                        # Submit button with icon
+                        if st.button("📤 Submit Quiz", key=f"submit_{i}"):
+                            score = 0
+                            total = len(questions)
+                            
+                            for j, q in enumerate(questions, 1):
+                                selected = st.session_state.quiz_answers.get(f"q_{i}_{j}")
+                                correct = answers.get(q['question'])
+                                if selected and correct and selected.startswith(correct):
+                                    score += 1
+                            
+                            st.markdown(f"""
+                            <div class="results-container">
+                                <h2>🎯 Quiz Results</h2>
+                                <h3>Score: {score}/{total}</h3>
+                                <p style="font-size: 1.2em;">Percentage: {(score/total)*100:.1f}%</p>
+                            </div>
+                            """, unsafe_allow_html=True)
+                            
+                            if score == total:
+                                st.balloons()
+                    else:
+                        st.error("❌ Failed to generate quiz. Please try again.")
             
             st.markdown("---")
 else:
@@ -952,12 +921,12 @@ else:
 
 # Add a section for specific news sources and date
 st.sidebar.markdown("---")
-st.sidebar.subheader("Specific News Sources")
+st.markdown('<h2 class="section-header">📰 Specific News Sources</h2>', unsafe_allow_html=True)
 news_source = st.sidebar.selectbox("Select News Source", ["The Hindu", "The Indian Express"])
 news_date = st.sidebar.date_input("Select Date", datetime.now())
 
-if st.sidebar.button("Fetch News"):
-    with st.spinner(f"Fetching news from {news_source} for {news_date.strftime('%d %B %Y')}..."):
+if st.sidebar.button("🔍 Fetch News"):
+    with st.spinner(f"🔍 Fetching news from {news_source} for {news_date.strftime('%d %B %Y')}..."):
         # Format date for API
         formatted_date = news_date.strftime("%Y-%m-%d")
         
