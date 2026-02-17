@@ -259,7 +259,7 @@ if not GOOGLE_API_KEY:
 
 # Configure Gemini
 genai.configure(api_key=GOOGLE_API_KEY)
-model = genai.GenerativeModel('gemini-2.0-flash')
+model = genai.GenerativeModel('gemini-2.5-flash')
 
 # Configure News API
 NEWS_API_URL = "https://newsapi.org/v2/everything"

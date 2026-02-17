@@ -111,7 +111,7 @@ if 'quiz_submitted' not in st.session_state:
 def generate_quiz(title, description):
     try:
         # Use Gemini 2.0 Flash model
-        model = genai.GenerativeModel('gemini-2.0-flash')
+        model = genai.GenerativeModel('gemini-2.5-flash')
         
         prompt = f"""
         Create a quiz with 5 UPSC-style multiple-choice questions based on this news article:
